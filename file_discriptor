@@ -1,0 +1,5 @@
+root@aws_host]#ulimit -acore file size
+root@aws_host]#sysctl fs.file-nr
+fs.file-nr=65785 0 65536
+here 65536 is the system wide maximum number of file  handles
+65785 is the current number of allocated file handles which is more than 65536
