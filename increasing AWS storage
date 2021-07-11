@@ -1,0 +1,93 @@
+lsblk lists all mass storage devices and partitions on them, including mounted file systems, unmounted file systems and devices without any file system
+
+df 'reports file system disk space usage', which means that it lists mounted file systems
+
+AWS AMI version 2017 
+root@aws_host]#lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+xsda      8:16   0   8G  0 disk  
+└─xsda1   8:17   0   8G  0 part /
+xsdb      8:16   0 465.8G  0 disk 
+├─xsdb1   8:18   0     465G  0 part 
+ └─data-l-m_v   8:17   0 465G  0 lvm /local/mnt
+loop6    7:6    0  86.6M  1 loop /snap/core/4486
+loop4    7:4    0 101.9M  1 loop /snap/skype/23
+
+
+check the disk space of your host, cleanup the logs, if nomore space to cleanup , proceed with increasing the storage 
+root@aws_host]df -kh
+Filesystem           Size  Used Avail Use% Mounted on
+/dev/xsda1          8.0G  1.2G  6.9G  15% /
+/dev/m/d-l_mnt_vol        465G  455G  9G  90% /local/mnt
+
+copy the instance id from ec2 console
+paste the instance id at ebs volumes, you see two partitions attached to this instance one is 8GB and other is 465GB, click on. 465GB volume and create snapshot of 
+the volume, once done, click on actions and modify the volume, add the required storage for ex 200GB, ie 465+200=665GB, click submit, the storage space will 
+be added disk, but it will not be added to the logical partition, we have to login to the host and increase the storage space on it. you have to be root.
+root@aws_host]#lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+xsda      8:16   0   8G  0 disk  
+└─xsda1   8:17   0   8G  0 part /
+xsdb      8:16   0 665.8G  0 disk     <--  added space
+├─xsdb1   8:18   0     465G  0 part      <-- not refelecting
+ └─data-l-m_v   8:17   0 465G  0 lvm /local/mnt   <-- not refelecting
+loop6    7:6    0  86.6M  1 loop /snap/core/4486
+loop4    7:4    0 101.9M  1 loop /snap/skype/23
+
+increasing the partiton
+root@aws_host]#growpart /dev/xsdb 1
+
+
+root@aws_host]#lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+xsda      8:16   0   8G  0 disk  
+└─xsda1   8:17   0   8G  0 part /
+xsdb      8:16   0 665.8G  0 disk     <--  added space
+├─xsdb1   8:18   0     665.8G  0 part      <-- added space
+ └─data-l-m_v   8:17   0 401.9G  0 lvm /local/mnt   <-- not refelecting
+loop6    7:6    0  86.6M  1 loop /snap/core/4486
+loop4    7:4    0 101.9M  1 loop /snap/skype/23
+
+
+root@aws_host]#pvresize /dev/xsdb 1
+root@aws_host]#lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+xsda      8:16   0   8G  0 disk  
+└─xsda1   8:17   0   8G  0 part /
+xsdb      8:16   0 665.8G  0 disk     <--  added space
+├─xsdb1   8:18   0     665.8G  0 part      <-- added space
+ └─data-l-m_v   8:17   0 665G  0 lvm /local/mnt   <-- added space
+loop6    7:6    0  86.6M  1 loop /snap/core/4486
+loop4    7:4    0 101.9M  1 loop /snap/skype/23
+
+root@aws_host]df -kh
+Filesystem           Size  Used Avail Use% Mounted on
+/dev/xsda1          8.0G  1.2G  6.9G  15% /
+/dev/m/d-l_mnt_vol        465G  455G  9G  90% /local/mnt  <-- not refelecting
+
+root@aws_host]lvextend -r -l +100%FREE /dev/m/d-l_mnt_vol
+
+root@aws_host]df -kh
+Filesystem           Size  Used Avail Use% Mounted on
+/dev/xsda1          8.0G  1.2G  6.9G  15% /
+/dev/m/d-l_mnt_vol        665G  455G  9G  60% /local/mnt     <-- added space
+
+
+
+
+
+AWS AMI version 2018
+
+
+root@aws_host]#lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+xsda      8:16   0   8G  0 disk  
+└─xsda1   8:17   0   8G  0 part /
+xsdb      8:16   0 465.8G  0 disk 
+├─xsdb1   8:18   0     465G  0 part 
+ └─data-l-m_v   8:17   0 465G  0  /local/mnt
+loop6    7:6    0  86.6M  1 loop /snap/core/4486
+loop4    7:4    0 101.9M  1 loop /snap/skype/23
+
+root@aws_host]#sudo resize2fs /dev/volumename
+ 
